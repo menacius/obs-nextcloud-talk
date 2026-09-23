@@ -1,0 +1,47 @@
+id: com.obsproject.Studio.Plugin.NextcloudTalk
+branch: stable
+runtime: com.obsproject.Studio
+runtime-version: stable
+sdk: org.freedesktop.Sdk//25.08
+build-extension: true
+separate-locales: false
+
+build-options:
+  prefix: /app/plugins/NextcloudTalk
+  strip: true
+
+modules:
+  - name: obs-nextcloud-talk
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DNEXTCLOUD_TALK_BUILD_TESTS=ON
+      - -DCMAKE_DISABLE_FIND_PACKAGE_LibDataChannel=TRUE
+      - -DFETCHCONTENT_SOURCE_DIR_LIBDATACHANNEL=/run/build/obs-nextcloud-talk/third_party/libdatachannel
+      - -DFETCHCONTENT_SOURCE_DIR_OLM=/run/build/obs-nextcloud-talk/third_party/olm
+    sources:
+      - type: dir
+        path: ../..
+      - type: git
+        url: https://github.com/paullouisageneau/libdatachannel.git
+        tag: v0.24.2
+        commit: 251f1b407907be571a9360e6d4f8dbce55c775c0
+        dest: third_party/libdatachannel
+      - type: git
+        url: https://gitlab.matrix.org/matrix-org/olm.git
+        tag: 3.2.16
+        commit: 7e0c8277032e40308987257b711b38af8d77cc69
+        dest: third_party/olm
+    post-install:
+      - ctest --test-dir . --output-on-failure
+      - install -Dm644 /run/build/obs-nextcloud-talk/packaging/flatpak/com.obsproject.Studio.Plugin.NextcloudTalk.metainfo.xml ${FLATPAK_DEST}/share/metainfo/com.obsproject.Studio.Plugin.NextcloudTalk.metainfo.xml
+      - test -f ${FLATPAK_DEST}/lib/obs-plugins/obs-nextcloud-talk.so
+      - test -z "$(ldd ${FLATPAK_DEST}/lib/obs-plugins/obs-nextcloud-talk.so | grep 'not found' || true)"
+
+cleanup:
+  - /include
+  - /lib/*.a
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/doc

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24...3.31)
 
-project(obs-nextcloud-talk VERSION 0.7.1 LANGUAGES C CXX)
+project(obs-nextcloud-talk VERSION 0.7.2 LANGUAGES C CXX)
 
 option(NEXTCLOUD_TALK_BUILD_TESTS "Build parser and state tests" ON)
 

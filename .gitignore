@@ -1,6 +1,9 @@
 /build/
 /build-*/
 /build-linux/
+/build-flatpak/
+/.flatpak-builder/
+/flatpak-repo/
 /dist/
 /install-backups/
 install-*-on-obs-exit.ps1

@@ -1,0 +1,28 @@
+name: Flatpak build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Flatpak build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder xauth xvfb
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive -y flathub \
+            com.obsproject.Studio//stable org.freedesktop.Sdk//25.08
+      - name: Build, test and verify Flatpak extension
+        run: ./build-flatpak.sh
+      - name: Upload Flatpak bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-nextcloud-talk-flatpak-x86_64
+          path: |
+            dist/*.flatpak
+            dist/*.flatpak.sha256

@@ -426,11 +426,9 @@ protected:
 		const std::size_t payloadCapacity = maximumFragmentSize_ - 1;
 		for (std::size_t offset = 0; offset < frame.size(); offset += payloadCapacity) {
 			const std::size_t count = std::min(payloadCapacity, frame.size() - offset);
-			rtc::binary payload;
-			payload.reserve(count + 1);
-			payload.push_back(offset == 0 ? std::byte{0x10} : std::byte{0x00});
-			payload.insert(payload.end(), frame.begin() + static_cast<std::ptrdiff_t>(offset),
-				       frame.begin() + static_cast<std::ptrdiff_t>(offset + count));
+			rtc::binary payload(count + 1);
+			payload.front() = offset == 0 ? std::byte{0x10} : std::byte{0x00};
+			std::copy_n(frame.begin() + static_cast<std::ptrdiff_t>(offset), count, payload.begin() + 1);
 			fragments.push_back(std::move(payload));
 		}
 		return fragments;

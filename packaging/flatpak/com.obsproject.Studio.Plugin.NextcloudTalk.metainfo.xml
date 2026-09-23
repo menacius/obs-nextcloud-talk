@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="addon">
+  <id>com.obsproject.Studio.Plugin.NextcloudTalk</id>
+  <extends>com.obsproject.Studio</extends>
+  <name>Nextcloud Talk for OBS</name>
+  <summary>Join Nextcloud Talk calls and expose participants as OBS sources</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <description>
+    <p>
+      A native OBS Studio dock for joining Nextcloud Talk calls, publishing OBS
+      video and audio, chatting, and adding participant media as persistent OBS
+      sources.
+    </p>
+  </description>
+  <url type="homepage">https://software.omniatv.com/nextcloud-talk/</url>
+  <url type="bugtracker">https://github.com/menacius/obs-nextcloud-talk/issues</url>
+  <releases>
+    <release version="0.7.2" date="2026-09-24"/>
+  </releases>
+</component>
