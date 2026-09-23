@@ -1,0 +1,16 @@
+/build/
+/build-*/
+/dist/
+/install-backups/
+install-*-on-obs-exit.ps1
+install-*-when-obs-exits.ps1
+install-*-status.txt
+/.vs/
+/.vscode/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+*.dll
+*.pdb
+*.zip
