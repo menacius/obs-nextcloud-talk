@@ -16,6 +16,7 @@ modules:
     builddir: true
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
       - -DNEXTCLOUD_TALK_BUILD_TESTS=ON
       - -DCMAKE_DISABLE_FIND_PACKAGE_LibDataChannel=TRUE
       - -DFETCHCONTENT_SOURCE_DIR_LIBDATACHANNEL=/run/build/obs-nextcloud-talk/third_party/libdatachannel
