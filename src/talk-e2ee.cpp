@@ -8,10 +8,17 @@
 #include <QMessageAuthenticationCode>
 #include <QUuid>
 
+#ifdef Q_OS_WIN
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <bcrypt.h>
+#else
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#endif
 
 #include <algorithm>
+#include <climits>
 #include <cstring>
 #include <optional>
 
@@ -25,10 +32,17 @@ constexpr int ratchetWindowSize = 8;
 
 QByteArray secureRandom(int size)
 {
-	QByteArray output(size, Qt::Uninitialized);
-	if (size <= 0 || BCryptGenRandom(nullptr, reinterpret_cast<PUCHAR>(output.data()),
-					static_cast<ULONG>(output.size()), BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0)
+	if (size <= 0)
 		return {};
+	QByteArray output(size, Qt::Uninitialized);
+#ifdef Q_OS_WIN
+	if (BCryptGenRandom(nullptr, reinterpret_cast<PUCHAR>(output.data()),
+			    static_cast<ULONG>(output.size()), BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0)
+		return {};
+#else
+	if (RAND_bytes(reinterpret_cast<unsigned char *>(output.data()), size) != 1)
+		return {};
+#endif
 	return output;
 }
 
@@ -231,6 +245,7 @@ public:
 	bool aesGcm(bool encrypt, const FrameKey &key, const QByteArray &iv, const QByteArray &aad,
 		    const QByteArray &input, const QByteArray &inputTag, QByteArray &output, QByteArray &outputTag)
 	{
+#ifdef Q_OS_WIN
 		BCRYPT_ALG_HANDLE algorithm = nullptr;
 		BCRYPT_KEY_HANDLE keyHandle = nullptr;
 		if (BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_AES_ALGORITHM, nullptr, 0) != 0)
@@ -269,6 +284,62 @@ public:
 			return false;
 		output.resize(static_cast<qsizetype>(written));
 		return true;
+#else
+		if (key.aesKey.size() != 16 || iv.isEmpty() || input.size() > INT_MAX || aad.size() > INT_MAX ||
+		    (!encrypt && inputTag.size() != gcmTagLength))
+			return false;
+		EVP_CIPHER_CTX *context = EVP_CIPHER_CTX_new();
+		if (!context)
+			return false;
+		bool success = false;
+		do {
+			if (EVP_CipherInit_ex(context, EVP_aes_128_gcm(), nullptr, nullptr, nullptr, encrypt ? 1 : 0) != 1)
+				break;
+			if (EVP_CIPHER_CTX_ctrl(context, EVP_CTRL_GCM_SET_IVLEN, static_cast<int>(iv.size()), nullptr) != 1)
+				break;
+			if (EVP_CipherInit_ex(context, nullptr, nullptr,
+				      reinterpret_cast<const unsigned char *>(key.aesKey.constData()),
+				      reinterpret_cast<const unsigned char *>(iv.constData()), -1) != 1)
+				break;
+			int written = 0;
+			if (!aad.isEmpty() &&
+			    EVP_CipherUpdate(context, nullptr, &written,
+					     reinterpret_cast<const unsigned char *>(aad.constData()),
+					     static_cast<int>(aad.size())) != 1)
+				break;
+			output.resize(input.size());
+			int total = 0;
+			if (!input.isEmpty() &&
+			    EVP_CipherUpdate(context, reinterpret_cast<unsigned char *>(output.data()), &written,
+					     reinterpret_cast<const unsigned char *>(input.constData()),
+					     static_cast<int>(input.size())) != 1)
+				break;
+			total += written;
+			if (!encrypt && EVP_CIPHER_CTX_ctrl(
+					context, EVP_CTRL_GCM_SET_TAG, gcmTagLength,
+					const_cast<char *>(inputTag.constData())) != 1)
+				break;
+			if (EVP_CipherFinal_ex(context,
+					       reinterpret_cast<unsigned char *>(output.data()) + total, &written) != 1)
+				break;
+			total += written;
+			output.resize(total);
+			if (encrypt) {
+				outputTag.resize(gcmTagLength);
+				if (EVP_CIPHER_CTX_ctrl(context, EVP_CTRL_GCM_GET_TAG, gcmTagLength, outputTag.data()) != 1)
+					break;
+			} else {
+				outputTag = inputTag;
+			}
+			success = true;
+		} while (false);
+		EVP_CIPHER_CTX_free(context);
+		if (!success) {
+			output.clear();
+			outputTag.clear();
+		}
+		return success;
+#endif
 	}
 
 	TalkE2ee *owner_ = nullptr;

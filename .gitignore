@@ -1,5 +1,6 @@
 /build/
 /build-*/
+/build-linux/
 /dist/
 /install-backups/
 install-*-on-obs-exit.ps1

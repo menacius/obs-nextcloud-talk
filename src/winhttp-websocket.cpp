@@ -30,6 +30,11 @@ WinHttpWebSocket::~WinHttpWebSocket()
 	close();
 }
 
+bool WinHttpWebSocket::isOpen() const
+{
+	return websocketHandle_.load() != nullptr;
+}
+
 void WinHttpWebSocket::open(const QString &url)
 {
 	close();

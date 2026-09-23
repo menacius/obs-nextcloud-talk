@@ -6,6 +6,17 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <wincred.h>
+#elif defined(Q_OS_LINUX)
+#ifdef signals
+#pragma push_macro("signals")
+#undef signals
+#define NEXTCLOUD_TALK_RESTORE_QT_SIGNALS
+#endif
+#include <libsecret/secret.h>
+#ifdef NEXTCLOUD_TALK_RESTORE_QT_SIGNALS
+#pragma pop_macro("signals")
+#undef NEXTCLOUD_TALK_RESTORE_QT_SIGNALS
+#endif
 #endif
 
 namespace nextcloud_talk {
@@ -23,6 +34,29 @@ QString windowsError(DWORD code)
 	if (buffer)
 		LocalFree(buffer);
 	return result;
+}
+#elif defined(Q_OS_LINUX)
+const SecretSchema credentialSchema = {
+	"com.omniatv.obs-nextcloud-talk",
+	SECRET_SCHEMA_NONE,
+	{{"target", SECRET_SCHEMA_ATTRIBUTE_STRING}, {nullptr, SECRET_SCHEMA_ATTRIBUTE_STRING}},
+	0,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+};
+
+QString secretServiceError(GError *error)
+{
+	if (!error)
+		return QStringLiteral("Unknown Secret Service error.");
+	const QString message = QString::fromUtf8(error->message);
+	g_error_free(error);
+	return message;
 }
 #endif
 
@@ -63,6 +97,25 @@ QString CredentialStore::load(const QString &serverUrl, const QString &username,
 	if (found)
 		*found = true;
 	return password;
+#elif defined(Q_OS_LINUX)
+	const QByteArray target = targetName(serverUrl, username).toUtf8();
+	GError *nativeError = nullptr;
+	gchar *secret = secret_password_lookup_sync(&credentialSchema, nullptr, &nativeError,
+						    "target", target.constData(), nullptr);
+	if (nativeError) {
+		if (error)
+			*error = secretServiceError(nativeError);
+		else
+			g_error_free(nativeError);
+		return {};
+	}
+	if (!secret)
+		return {};
+	const QString password = QString::fromUtf8(secret);
+	secret_password_free(secret);
+	if (found)
+		*found = true;
+	return password;
 #else
 	if (error)
 		*error = QStringLiteral("Secure credential storage is not implemented on this platform.");
@@ -98,6 +151,22 @@ bool CredentialStore::save(const QString &serverUrl, const QString &username, co
 		return false;
 	}
 	return true;
+#elif defined(Q_OS_LINUX)
+	const QByteArray target = targetName(serverUrl, username).toUtf8();
+	const QByteArray secret = password.toUtf8();
+	const QByteArray label = QStringLiteral("OBS Nextcloud Talk — %1").arg(username.trimmed()).toUtf8();
+	GError *nativeError = nullptr;
+	const gboolean stored = secret_password_store_sync(
+		&credentialSchema, SECRET_COLLECTION_DEFAULT, label.constData(), secret.constData(), nullptr, &nativeError,
+		"target", target.constData(), nullptr);
+	if (!stored) {
+		if (error)
+			*error = secretServiceError(nativeError);
+		else if (nativeError)
+			g_error_free(nativeError);
+		return false;
+	}
+	return true;
 #else
 	if (error)
 		*error = QStringLiteral("Secure credential storage is not implemented on this platform.");
@@ -120,6 +189,19 @@ bool CredentialStore::remove(const QString &serverUrl, const QString &username, 
 			return true;
 		if (error)
 			*error = windowsError(code);
+		return false;
+	}
+	return true;
+#elif defined(Q_OS_LINUX)
+	const QByteArray target = targetName(serverUrl, username).toUtf8();
+	GError *nativeError = nullptr;
+	const gboolean removed = secret_password_clear_sync(&credentialSchema, nullptr, &nativeError,
+							     "target", target.constData(), nullptr);
+	if (!removed) {
+		if (error)
+			*error = secretServiceError(nativeError);
+		else if (nativeError)
+			g_error_free(nativeError);
 		return false;
 	}
 	return true;

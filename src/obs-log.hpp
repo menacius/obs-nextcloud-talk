@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef NEXTCLOUD_TALK_TESTING
 #include <obs-module.h>
+#endif
 
 #include <QDebug>
 #include <QString>
@@ -8,6 +10,12 @@
 #include <optional>
 
 namespace nextcloud_talk {
+
+#ifdef NEXTCLOUD_TALK_TESTING
+inline constexpr int LOG_INFO = 200;
+inline constexpr int LOG_WARNING = 300;
+inline constexpr int LOG_ERROR = 400;
+#endif
 
 // Streams a Qt-formatted line into OBS's own log when the temporary is destroyed.
 class ObsLogLine final {

@@ -27,9 +27,9 @@ Implemented:
 - Preview and Program selections follow OBS scene changes while a call is active.
 - Device mode requires one video and one audio capture source; scene modes publish the selected scene's audio mix.
 - Incoming Talk audio is excluded from the outgoing device selector to prevent the simplest feedback loop.
-- Persistent non-secret settings plus an app password stored in Windows Credential Manager.
+- Persistent non-secret settings plus an app password stored in Windows Credential Manager or the Linux system keyring.
 - Talk signaling-settings discovery through API v3.
-- External/HPB signaling authentication and room membership over a native WinHTTP WebSocket.
+- External/HPB signaling authentication and room membership over WinHTTP on Windows or libdatachannel WebSocket transport on Linux.
 - STUN/TURN configuration and WebRTC peer connections through libdatachannel.
 - Talk SDP and ICE candidate exchange for both MCU subscriber offers and peer-to-peer offers.
 - H.264 and VP8 remote video depacketization and decode into participant video sources.
@@ -111,6 +111,48 @@ $env:PATH = "C:\path\to\qt-dependencies\bin;$env:PATH"
 ctest --test-dir build -C RelWithDebInfo --output-on-failure
 ```
 
+## Build on Linux
+
+Requirements:
+
+- GCC or Clang with C++17 support, CMake 3.24 or later, Ninja and pkg-config.
+- OBS Studio development packages (`libobs` and `obs-frontend-api`).
+- Qt 6 Core, Network, SVG and Widgets development packages.
+- FFmpeg development packages for `avcodec`, `avutil`, `swresample` and `swscale`.
+- OpenSSL and libsecret development packages.
+- Git and internet access for the pinned Olm dependency and, when no system package is available, the pinned libdatachannel fallback.
+
+On Debian or Ubuntu, install the distribution packages and run:
+
+```bash
+chmod +x build-linux.sh
+./build-linux.sh
+```
+
+The script configures a `RelWithDebInfo` build, compiles the plugin, runs all tests, checks the resulting shared object with `ldd`, installs only the runtime component into a staging directory and creates:
+
+```text
+dist/obs-nextcloud-talk-0.7.0-linux-<architecture>.tar.gz
+dist/obs-nextcloud-talk-0.7.0-linux-<architecture>.tar.gz.sha256
+```
+
+Install the archive under `/usr/local` and restart OBS Studio:
+
+```bash
+sudo tar -xzf dist/obs-nextcloud-talk-0.7.0-linux-x86_64.tar.gz -C /usr/local
+```
+
+The target system needs OBS Studio, Qt 6, FFmpeg, OpenSSL 3 and the Secret Service runtime (`libsecret-1-0` on Debian/Ubuntu).
+
+For a manual build:
+
+```bash
+cmake -S . -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build-linux --parallel
+ctest --test-dir build-linux --output-on-failure
+cmake --install build-linux --prefix package-root --component Runtime
+```
+
 ## OBS installation layout
 
 Copy the built artifacts into an OBS installation or staging directory:
@@ -130,7 +172,8 @@ Do not distribute only the DLL if future media-engine dependencies are enabled; 
 - `src/talk-media-transport.*` — Talk external signaling and WebRTC peer sessions.
 - `src/outgoing-media.*` — selected-source capture, resampling, H.264, and Opus encoding.
 - `src/incoming-media-decoder.*` — FFmpeg video/audio decode and OBS frame delivery.
-- `src/winhttp-websocket.*` — native Windows secure WebSocket transport.
+- `src/winhttp-websocket.*` — native Windows secure WebSocket transport and its shared interface.
+- `src/datachannel-websocket.cpp` — portable libdatachannel WebSocket transport used on Linux.
 - `src/source-registry.*` — stable participant-to-OBS-source lifecycle.
 - `src/participant-source.*` — native asynchronous OBS video/audio inputs and media frame ingress.
 - `src/talk-dock.*` — account, conversation, participant, and outgoing-media controls.
@@ -142,7 +185,7 @@ Do not distribute only the DLL if future media-engine dependencies are enabled; 
 
 - Use a Nextcloud app password, not the account's primary password.
 - The plugin does not bypass TLS errors.
-- The app password is stored as a generic Windows credential, encrypted and access-controlled by Windows for the signed-in account. It is never written to `settings.json`.
+- The app password is stored as a generic Windows credential or in the Linux Secret Service keyring, encrypted and access-controlled for the signed-in account. It is never written to `settings.json`.
 - Use **Forget saved** in the dock to remove the stored credential.
 - OBS scenes may contain participant names in source names; treat scene collections as personal data.
 

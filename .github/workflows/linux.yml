@@ -1,0 +1,29 @@
+name: Linux build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git ninja-build pkg-config \
+            libobs-dev qt6-base-dev qt6-svg-dev \
+            libavcodec-dev libavutil-dev libswresample-dev libswscale-dev \
+            libsecret-1-dev libssl-dev
+      - name: Build, test and package
+        run: ./build-linux.sh
+      - name: Upload Linux package
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-nextcloud-talk-linux-x86_64
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256

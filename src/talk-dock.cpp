@@ -55,6 +55,17 @@ QString stateLabel(ConnectionState state)
 	return QStringLiteral("Unknown");
 }
 
+QString credentialStoreName()
+{
+#ifdef Q_OS_WIN
+	return QStringLiteral("Windows Credential Manager");
+#elif defined(Q_OS_LINUX)
+	return QStringLiteral("the system keyring");
+#else
+	return QStringLiteral("the operating-system credential store");
+#endif
+}
+
 struct OutputLists {
 	QStringList video;
 	QStringList audio;
@@ -185,7 +196,7 @@ void TalkDock::buildUi()
 	username_ = new QLineEdit(accountBox);
 	appPassword_ = new QLineEdit(accountBox);
 	appPassword_->setEchoMode(QLineEdit::Password);
-	appPassword_->setPlaceholderText(QStringLiteral("Stored securely in Windows Credential Manager"));
+	appPassword_->setPlaceholderText(QStringLiteral("Stored securely in %1").arg(credentialStoreName()));
 	forgetPassword_ = new QPushButton(QStringLiteral("Forget saved"), accountBox);
 	forgetPassword_->setEnabled(false);
 	auto *passwordRow = new QWidget(accountBox);
@@ -435,7 +446,7 @@ void TalkDock::loadStoredCredential()
 	forgetPassword_->setEnabled(found);
 	if (found) {
 		appPassword_->setText(password);
-		appPassword_->setToolTip(QStringLiteral("Loaded from Windows Credential Manager"));
+		appPassword_->setToolTip(QStringLiteral("Loaded from %1").arg(credentialStoreName()));
 	}
 }
 
@@ -453,7 +464,7 @@ bool TalkDock::storeCredentialForCurrentAccount()
 	}
 	storedCredentialAvailable_ = true;
 	forgetPassword_->setEnabled(true);
-	appPassword_->setToolTip(QStringLiteral("Saved in Windows Credential Manager"));
+	appPassword_->setToolTip(QStringLiteral("Saved in %1").arg(credentialStoreName()));
 	return true;
 }
 
