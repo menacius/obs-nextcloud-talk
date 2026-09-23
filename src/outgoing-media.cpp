@@ -564,16 +564,26 @@ private:
 			error = QStringLiteral("Could not allocate the Opus encoder.");
 			return false;
 		}
+		bool supportsFloat = false;
+#if LIBAVCODEC_VERSION_MAJOR >= 61
 		const void *formats = nullptr;
 		int formatCount = 0;
 		const int queried = avcodec_get_supported_config(audioCodec_, codec, AV_CODEC_CONFIG_SAMPLE_FORMAT,
 							 0, &formats, &formatCount);
-		bool supportsFloat = queried >= 0 && !formats;
+		supportsFloat = queried >= 0 && !formats;
 		if (formats) {
 			const auto *sampleFormats = static_cast<const AVSampleFormat *>(formats);
 			for (int index = 0; index < formatCount; ++index)
 				supportsFloat = supportsFloat || sampleFormats[index] == AV_SAMPLE_FMT_FLT;
 		}
+#else
+		if (!codec->sample_fmts) {
+			supportsFloat = true;
+		} else {
+			for (const AVSampleFormat *format = codec->sample_fmts; *format != AV_SAMPLE_FMT_NONE; ++format)
+				supportsFloat = supportsFloat || *format == AV_SAMPLE_FMT_FLT;
+		}
+#endif
 		if (!supportsFloat) {
 			error = QStringLiteral("The available Opus encoder does not accept float PCM.");
 			return false;
