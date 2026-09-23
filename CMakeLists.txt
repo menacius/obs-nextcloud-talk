@@ -12,7 +12,25 @@ if(NOT TARGET OBS::obs-frontend-api)
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Network Svg Widgets)
-find_package(FFmpeg REQUIRED COMPONENTS avcodec avutil swresample swscale)
+if(UNIX)
+  find_package(PkgConfig REQUIRED)
+endif()
+
+find_package(FFmpeg QUIET COMPONENTS avcodec avutil swresample swscale)
+if(TARGET FFmpeg::avcodec AND TARGET FFmpeg::avutil AND
+   TARGET FFmpeg::swresample AND TARGET FFmpeg::swscale)
+  set(NEXTCLOUD_TALK_FFMPEG_TARGETS
+    FFmpeg::avcodec FFmpeg::avutil FFmpeg::swresample FFmpeg::swscale)
+elseif(UNIX)
+  pkg_check_modules(AVCodec REQUIRED IMPORTED_TARGET libavcodec)
+  pkg_check_modules(AVUtil REQUIRED IMPORTED_TARGET libavutil)
+  pkg_check_modules(SWResample REQUIRED IMPORTED_TARGET libswresample)
+  pkg_check_modules(SWScale REQUIRED IMPORTED_TARGET libswscale)
+  set(NEXTCLOUD_TALK_FFMPEG_TARGETS
+    PkgConfig::AVCodec PkgConfig::AVUtil PkgConfig::SWResample PkgConfig::SWScale)
+else()
+  message(FATAL_ERROR "FFmpeg development libraries were not found.")
+endif()
 
 include(FetchContent)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
@@ -49,7 +67,6 @@ if(NOT WIN32)
   find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 endif()
 if(UNIX AND NOT APPLE)
-  find_package(PkgConfig REQUIRED)
   pkg_check_modules(LibSecret REQUIRED IMPORTED_TARGET libsecret-1)
 endif()
 
@@ -121,10 +138,7 @@ target_link_libraries(
     Qt6::Widgets
     LibDataChannel::LibDataChannel
     Olm::Olm
-    FFmpeg::avcodec
-    FFmpeg::avutil
-    FFmpeg::swresample
-    FFmpeg::swscale
+    ${NEXTCLOUD_TALK_FFMPEG_TARGETS}
 )
 
 if(WIN32)
