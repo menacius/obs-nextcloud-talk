@@ -2,7 +2,7 @@
 
 Native OBS Studio plugin foundation for using OBS as a Nextcloud Talk call endpoint.
 
-## Current milestone (0.7.0)
+## Current milestone (0.7.1)
 
 Implemented:
 
@@ -66,7 +66,7 @@ The dock reports each signaling/WebRTC phase. Outgoing VP8 publication and incom
 
 ## Download and install
 
-Download the Windows x64 package from the [0.7.0 release](https://github.com/menacius/obs-nextcloud-talk/releases/tag/v0.7.0) or the [OmniaTV Software page](https://software.omniatv.com/nextcloud-talk/).
+Download the Linux x86_64 package from the [0.7.1 release](https://github.com/menacius/obs-nextcloud-talk/releases/tag/v0.7.1) or use the Windows x64 package from the [0.7.0 release](https://github.com/menacius/obs-nextcloud-talk/releases/tag/v0.7.0). Both are also available from the [OmniaTV Software page](https://software.omniatv.com/nextcloud-talk/).
 
 Close OBS Studio, extract the package into the OBS Studio installation directory, and restart OBS. The archive contains the native plugin, its required runtime libraries, and the plugin data files in the standard OBS directory layout.
 
@@ -132,14 +132,14 @@ chmod +x build-linux.sh
 The script configures a `RelWithDebInfo` build, compiles the plugin, runs all tests, checks the resulting shared object with `ldd`, installs only the runtime component into a staging directory and creates:
 
 ```text
-dist/obs-nextcloud-talk-0.7.0-linux-<architecture>.tar.gz
-dist/obs-nextcloud-talk-0.7.0-linux-<architecture>.tar.gz.sha256
+dist/obs-nextcloud-talk-0.7.1-linux-<architecture>.tar.gz
+dist/obs-nextcloud-talk-0.7.1-linux-<architecture>.tar.gz.sha256
 ```
 
 Install the archive under `/usr/local` and restart OBS Studio:
 
 ```bash
-sudo tar -xzf dist/obs-nextcloud-talk-0.7.0-linux-x86_64.tar.gz -C /usr/local
+sudo tar -xzf dist/obs-nextcloud-talk-0.7.1-linux-x86_64.tar.gz -C /usr/local
 ```
 
 The target system needs OBS Studio, Qt 6, FFmpeg, OpenSSL 3 and the Secret Service runtime (`libsecret-1-0` on Debian/Ubuntu).
